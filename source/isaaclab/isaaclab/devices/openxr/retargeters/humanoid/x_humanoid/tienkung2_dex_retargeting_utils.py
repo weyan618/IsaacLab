@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# Copyright (c) 2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -32,36 +32,38 @@ _OPERATOR2MANO_LEFT = np.array([
 ])
 
 _LEFT_HAND_JOINT_NAMES = [
-    "L_index_proximal_joint",
-    "L_index_intermediate_joint",
-    "L_middle_proximal_joint",
-    "L_middle_intermediate_joint",
-    "L_pinky_proximal_joint",
-    "L_pinky_intermediate_joint",
-    "L_ring_proximal_joint",
-    "L_ring_intermediate_joint",
-    "L_thumb_proximal_yaw_joint",
-    "L_thumb_proximal_pitch_joint",
-    "L_thumb_distal_joint",
+    "L_Joint_00",
+    "L_Joint_01",
+    "L_Joint_10",
+    "L_Joint_11",
+    "L_Joint_20",
+    "L_Joint_21",
+    "L_Joint_30",
+    "L_Joint_31",
+    "L_Joint_40",
+    "L_Joint_41",
+    "L_Joint_42",
+    "L_Joint_43",
 ]
 
 
 _RIGHT_HAND_JOINT_NAMES = [
-    "R_index_proximal_joint",
-    "R_index_intermediate_joint",
-    "R_middle_proximal_joint",
-    "R_middle_intermediate_joint",
-    "R_pinky_proximal_joint",
-    "R_pinky_intermediate_joint",
-    "R_ring_proximal_joint",
-    "R_ring_intermediate_joint",
-    "R_thumb_proximal_yaw_joint",
-    "R_thumb_proximal_pitch_joint",
-    "R_thumb_distal_joint",
+    "R_Joint_00",
+    "R_Joint_01",
+    "R_Joint_10",
+    "R_Joint_11",
+    "R_Joint_20",
+    "R_Joint_21",
+    "R_Joint_30",
+    "R_Joint_31",
+    "R_Joint_40",
+    "R_Joint_41",
+    "R_Joint_42",
+    "R_Joint_43",
 ]
 
 
-class GR1TR2DexRetargeting:
+class TienKung2DexRetargeting:
     """A class for hand retargeting with GR1Fourier.
 
     Handles retargeting of OpenXRhand tracking data to GR1T2 robot hand joint angles.
@@ -70,10 +72,10 @@ class GR1TR2DexRetargeting:
     def __init__(
         self,
         hand_joint_names: list[str],
-        right_hand_config_filename: str = "fourier_hand_right_dexpilot.yml",
-        left_hand_config_filename: str = "fourier_hand_left_dexpilot.yml",
-        left_hand_urdf_path: str = f"{ISAACLAB_NUCLEUS_DIR}/Mimic/GR1T2_assets/GR1_T2_left_hand.urdf",
-        right_hand_urdf_path: str = f"{ISAACLAB_NUCLEUS_DIR}/Mimic/GR1T2_assets/GR1_T2_right_hand.urdf",
+        right_hand_config_filename: str = "tienkung2_hand_right_dexpilot.yml",
+        left_hand_config_filename: str = "tienkung2_hand_left_dexpilot.yml",
+        left_hand_urdf_path: str = f"/home/yanwei/project/g1_29dof_rev_1_0_with_inspire_hand_FTP/tk2_retarget_inspire_white_left_hand.urdf",
+        right_hand_urdf_path: str = f"/home/yanwei/project/g1_29dof_rev_1_0_with_inspire_hand_FTP/tk2_retarget_inspire_white_right_hand.urdf",
     ):
         """Initialize the hand retargeting.
 
@@ -104,7 +106,7 @@ class GR1TR2DexRetargeting:
         self.dof_names = self.left_dof_names + self.right_dof_names
         self.isaac_lab_hand_joint_names = hand_joint_names
 
-        omni.log.info("[GR1T2DexRetargeter] init done.")
+        omni.log.info("[Tienkung2DexRetargeter] init done.")
 
     def _update_yaml_with_urdf_path(self, yaml_path: str, urdf_path: str):
         """Update YAML file with the correct URDF path.
@@ -188,14 +190,15 @@ class GR1TR2DexRetargeting:
         Returns:
             Retargeted joint angles
         """
+
         joint_pos = self.convert_hand_joints(hand_joints, operator2mano)
         ref_value = self.compute_ref_value(
             joint_pos,
             indices=retargeting.optimizer.target_link_human_indices,
             retargeting_type=retargeting.optimizer.retargeting_type,
         )
-        print("====================")
-        print(ref_value)
+      #  print("==================")
+      #  print(ref_value)
         # Enable gradient calculation and inference mode in case some other script has disabled it
         # This is necessary for the retargeting to work since it uses gradient features that
         # are not available in inference mode

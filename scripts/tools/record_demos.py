@@ -247,12 +247,12 @@ def create_environment(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg) -> gym.En
     Raises:
         Exception: If environment creation fails for any reason.
     """
-    try:
-        env = gym.make(args_cli.task, cfg=env_cfg).unwrapped
-        return env
-    except Exception as e:
-        omni.log.error(f"Failed to create environment: {e}")
-        exit(1)
+   # try:
+    env = gym.make(args_cli.task, cfg=env_cfg).unwrapped
+    return env
+   # except Exception as e:
+   #     omni.log.error(f"Failed to create environment: {e}")
+   #     exit(1)
 
 
 def setup_teleop_device(callbacks: dict[str, Callable]) -> object:

@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# Copyright (c) 2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -16,30 +16,29 @@ from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 
 # This import exception is suppressed because gr1_t2_dex_retargeting_utils depends on pinocchio which is not available on windows
 with contextlib.suppress(Exception):
-    from .gr1_t2_dex_retargeting_utils import GR1TR2DexRetargeting
-
+    from .tienkung2_dex_retargeting_utils import TienKung2DexRetargeting
+#    from .gr1_t2_dex_retargeting_utils import GR1TR2DexRetargeting as TienKung2DexRetargeting
 
 @dataclass
-class GR1T2RetargeterCfg(RetargeterCfg):
-    """Configuration for the GR1T2 retargeter."""
+class Tienkung2RetargeterCfg(RetargeterCfg):
+    """Configuration for the Tienkung2 retargeter."""
 
     enable_visualization: bool = False
-    num_open_xr_hand_joints: int = 100
+    num_open_xr_hand_joints: int = 52
     hand_joint_names: list[str] | None = None  # List of robot hand joint names
 
+class Tienkung2Retargeter(RetargeterBase):
+    """Retargets OpenXR hand tracking data to Tienkung2 hand end-effector commands.
 
-class GR1T2Retargeter(RetargeterBase):
-    """Retargets OpenXR hand tracking data to GR1T2 hand end-effector commands.
-
-    This retargeter maps hand tracking data from OpenXR to joint commands for the GR1T2 robot's hands.
-    It handles both left and right hands, converting poses of the hands in OpenXR format joint angles for the GR1T2 robot's hands.
+    This retargeter maps hand tracking data from OpenXR to joint commands for the TienKung2 robot's hands.
+    It handles both left and right hands, converting poses of the hands in OpenXR format joint angles for the TienKung2 robot's hands.
     """
 
     def __init__(
         self,
-        cfg: GR1T2RetargeterCfg,
+        cfg: Tienkung2RetargeterCfg
     ):
-        """Initialize the GR1T2 hand retargeter.
+        """Initialize the TienKung2 hand retargeter.
 
         Args:
             enable_visualization: If True, visualize tracked hand joints
@@ -49,12 +48,12 @@ class GR1T2Retargeter(RetargeterBase):
         """
 
         self._hand_joint_names = cfg.hand_joint_names
-        self._hands_controller = GR1TR2DexRetargeting(self._hand_joint_names)
+        self._hands_controller = TienKung2DexRetargeting(self._hand_joint_names)
 
         # Initialize visualization if enabled
         self._enable_visualization = cfg.enable_visualization
         self._num_open_xr_hand_joints = cfg.num_open_xr_hand_joints
-        self._sim_device = cfg.sim_device
+        self._device = cfg.sim_device
         if self._enable_visualization:
             marker_cfg = VisualizationMarkersCfg(
                 prim_path="/Visuals/markers",
@@ -93,32 +92,36 @@ class GR1T2Retargeter(RetargeterBase):
             joints_position[::2] = np.array([pose[:3] for pose in left_hand_poses.values()])
             joints_position[1::2] = np.array([pose[:3] for pose in right_hand_poses.values()])
 
-            self._markers.visualize(translations=torch.tensor(joints_position, device=self._sim_device))
+            self._markers.visualize(translations=torch.tensor(joints_position, device=self._device))
 
         # Create array of zeros with length matching number of joint names
-        print("====================================")
-        print(left_hand_poses)
         left_hands_pos = self._hands_controller.compute_left(left_hand_poses)
-        print(left_hands_pos)
         indexes = [self._hand_joint_names.index(name) for name in self._hands_controller.get_left_joint_names()]
         left_retargeted_hand_joints = np.zeros(len(self._hands_controller.get_joint_names()))
-        left_retargeted_hand_joints[indexes] = left_hands_pos
+        left_retargeted_hand_joints[indexes] = -1 * left_hands_pos
         left_hand_joints = left_retargeted_hand_joints
 
         right_hands_pos = self._hands_controller.compute_right(right_hand_poses)
         indexes = [self._hand_joint_names.index(name) for name in self._hands_controller.get_right_joint_names()]
         right_retargeted_hand_joints = np.zeros(len(self._hands_controller.get_joint_names()))
-        right_retargeted_hand_joints[indexes] = right_hands_pos
+        right_retargeted_hand_joints[indexes] = -1 * right_hands_pos
         right_hand_joints = right_retargeted_hand_joints
         retargeted_hand_joints = left_hand_joints + right_hand_joints
+        retargeted_hand_joints[4] = -1 * retargeted_hand_joints[4]
+        retargeted_hand_joints[19] = -1 * retargeted_hand_joints[19]
 
-        # Convert numpy arrays to tensors and concatenate them
-        left_wrist_tensor = torch.tensor(left_wrist, dtype=torch.float32, device=self._sim_device)
-        right_wrist_tensor = torch.tensor(self._retarget_abs(right_wrist), dtype=torch.float32, device=self._sim_device)
-        hand_joints_tensor = torch.tensor(retargeted_hand_joints, dtype=torch.float32, device=self._sim_device)
+        #debug
+        #tmp_array = np.array([0,0],dtype=np.float32)
+        #retargeted_hand_joints = np.concatenate((retargeted_hand_joints, tmp_array))
 
-        # Combine all tensors into a single tensor
-        return torch.cat([left_wrist_tensor, right_wrist_tensor, hand_joints_tensor])
+        return torch.cat([self._retarget_abs_left(left_wrist), self._retarget_abs(right_wrist), torch.Tensor(retargeted_hand_joints)])
+
+    def _retarget_abs_left(self, wrist: np.ndarray) -> np.ndarray:
+        wrist_pos = torch.tensor(wrist[:3], dtype=torch.float32)
+        wrist_quat = torch.tensor(wrist[3:], dtype=torch.float32)
+        calibrate_pos = torch.FloatTensor([0.0, -0.04, 0.48])
+
+        return torch.cat([wrist_pos + calibrate_pos + calibrate_pos, wrist_quat])
 
     def _retarget_abs(self, wrist: np.ndarray) -> np.ndarray:
         """Handle absolute pose retargeting.
@@ -136,6 +139,7 @@ class GR1T2Retargeter(RetargeterBase):
         # Note: The pose utils require torch tensors
         wrist_pos = torch.tensor(wrist[:3], dtype=torch.float32)
         wrist_quat = torch.tensor(wrist[3:], dtype=torch.float32)
+        calibrate_pos = torch.FloatTensor([0.0, -0.07, 0.95])
         openxr_right_wrist_in_world = PoseUtils.make_pose(wrist_pos, PoseUtils.matrix_from_quat(wrist_quat))
 
         # The usd control frame is 180 degrees rotated around z axis wrt to the openxr frame
@@ -158,4 +162,4 @@ class GR1T2Retargeter(RetargeterBase):
         )
         usd_right_roll_link_in_world_quat = PoseUtils.quat_from_matrix(usd_right_roll_link_in_world_mat)
 
-        return np.concatenate([usd_right_roll_link_in_world_pos, usd_right_roll_link_in_world_quat])
+        return torch.cat([usd_right_roll_link_in_world_pos + calibrate_pos, usd_right_roll_link_in_world_quat])

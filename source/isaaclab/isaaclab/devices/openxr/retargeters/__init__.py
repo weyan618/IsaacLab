@@ -11,6 +11,7 @@ from .humanoid.unitree.trihand.g1_upper_body_retargeter import (
     G1TriHandUpperBodyRetargeter,
     G1TriHandUpperBodyRetargeterCfg,
 )
+from .humanoid.x_humanoid.tienkung2_retargeter import Tienkung2Retargeter, Tienkung2RetargeterCfg
 from .manipulator.gripper_retargeter import GripperRetargeter, GripperRetargeterCfg
 from .manipulator.se3_abs_retargeter import Se3AbsRetargeter, Se3AbsRetargeterCfg
 from .manipulator.se3_rel_retargeter import Se3RelRetargeter, Se3RelRetargeterCfg
